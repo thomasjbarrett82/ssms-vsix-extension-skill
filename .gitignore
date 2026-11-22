@@ -1,0 +1,8 @@
+# Local copies of third-party extensions used for research. Not part of this repository.
+# The leading slash matters: skills/ssms-extension/references/ must stay tracked.
+/references/
+
+bin/
+obj/
+.vs/
+*.user

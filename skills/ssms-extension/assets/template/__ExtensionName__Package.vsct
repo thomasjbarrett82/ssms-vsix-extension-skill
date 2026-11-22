@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!-- Standard shell menus and groups (guidSHLMainMenu, IDM_VS_MENU_TOOLS, ...). -->
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+
+  <Commands package="guidPackage">
+
+    <Menus>
+      <!-- Tools > __DisplayName__ -->
+      <Menu guid="guidCommandSet" id="ToolsSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidCommandSet" id="ToolsMenuGroup" />
+        <Strings>
+          <ButtonText>__DisplayName__</ButtonText>
+        </Strings>
+      </Menu>
+    </Menus>
+
+    <Groups>
+      <!-- A command always lives in a group, and a group lives in a menu. -->
+      <Group guid="guidCommandSet" id="ToolsMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
+      </Group>
+      <Group guid="guidCommandSet" id="SubMenuCommandsGroup" priority="0x0100">
+        <Parent guid="guidCommandSet" id="ToolsSubMenu" />
+      </Group>
+      <!-- A second group in the same menu is drawn below a separator. -->
+      <Group guid="guidCommandSet" id="SubMenuInfoGroup" priority="0x0200">
+        <Parent guid="guidCommandSet" id="ToolsSubMenu" />
+      </Group>
+      <!-- #if QueryEditor -->
+      <!-- The right-click menu of the SQL query editor is owned by SSMS, not the VS shell. -->
+      <Group guid="guidCommandSet" id="QueryEditorContextGroup" priority="0x0700">
+        <Parent guid="guidSqlEditorMenus" id="IDM_SQLWB_SQLSCRIPT_CONTEXT" />
+      </Group>
+      <!-- #endif -->
+    </Groups>
+
+    <Buttons>
+      <!-- #if QueryEditor -->
+      <Button guid="guidCommandSet" id="cmdidOpenSelectionInNewQuery" priority="0x0100" type="Button">
+        <Parent guid="guidCommandSet" id="SubMenuCommandsGroup" />
+        <!-- Lets the BeforeQueryStatus handler show, hide and enable the command. -->
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <CommandFlag>DefaultDisabled</CommandFlag>
+        <Strings>
+          <ButtonText>Open Selection in New Query</ButtonText>
+        </Strings>
+      </Button>
+      <!-- #endif -->
+      <!-- #if ToolWindow -->
+      <Button guid="guidCommandSet" id="cmdidShowToolWindow" priority="0x0200" type="Button">
+        <Parent guid="guidCommandSet" id="SubMenuCommandsGroup" />
+        <Strings>
+          <ButtonText>Show __DisplayName__ Window</ButtonText>
+        </Strings>
+      </Button>
+      <!-- #endif -->
+      <!-- #if Options -->
+      <Button guid="guidCommandSet" id="cmdidOptions" priority="0x0100" type="Button">
+        <Parent guid="guidCommandSet" id="SubMenuInfoGroup" />
+        <Strings>
+          <ButtonText>Options...</ButtonText>
+        </Strings>
+      </Button>
+      <!-- #endif -->
+      <Button guid="guidCommandSet" id="cmdidAbout" priority="0x0200" type="Button">
+        <Parent guid="guidCommandSet" id="SubMenuInfoGroup" />
+        <Strings>
+          <ButtonText>About</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <!-- #if QueryEditor -->
+  <!-- A button has one Parent; every additional place it appears is a CommandPlacement. -->
+  <CommandPlacements>
+    <CommandPlacement guid="guidCommandSet" id="cmdidOpenSelectionInNewQuery" priority="0x0100">
+      <Parent guid="guidCommandSet" id="QueryEditorContextGroup" />
+    </CommandPlacement>
+  </CommandPlacements>
+  <!-- #endif -->
+
+  <Symbols>
+    <!-- Must match PackageIds.cs. -->
+    <GuidSymbol name="guidPackage" value="{__PackageGuid__}" />
+    <GuidSymbol name="guidCommandSet" value="{__CommandSetGuid__}">
+      <IDSymbol name="cmdidAbout" value="0x0100" />
+      <!-- #if QueryEditor -->
+      <IDSymbol name="cmdidOpenSelectionInNewQuery" value="0x0101" />
+      <!-- #endif -->
+      <!-- #if ToolWindow -->
+      <IDSymbol name="cmdidShowToolWindow" value="0x0102" />
+      <!-- #endif -->
+      <!-- #if Options -->
+      <IDSymbol name="cmdidOptions" value="0x0103" />
+      <!-- #endif -->
+      <IDSymbol name="ToolsMenuGroup" value="0x1000" />
+      <IDSymbol name="ToolsSubMenu" value="0x1010" />
+      <IDSymbol name="SubMenuCommandsGroup" value="0x1020" />
+      <IDSymbol name="SubMenuInfoGroup" value="0x1030" />
+      <!-- #if QueryEditor -->
+      <IDSymbol name="QueryEditorContextGroup" value="0x1040" />
+      <!-- #endif -->
+    </GuidSymbol>
+    <!-- #if QueryEditor -->
+
+    <!-- Context menus of the SSMS query window. These ids are undocumented SSMS internals. -->
+    <GuidSymbol name="guidSqlEditorMenus" value="{33F13AC3-80BB-4ECB-85BC-225435603A5E}">
+      <IDSymbol name="IDM_SQLWB_SQLSCRIPT_CONTEXT" value="0x0050" />  <!-- query text editor -->
+      <IDSymbol name="IDM_SQLWB_SQLRESMSG_CONTEXT" value="0x0060" />  <!-- Messages tab -->
+      <IDSymbol name="IDM_SQLWB_SQLRESGRID_CONTEXT" value="0x0070" /> <!-- results grid -->
+      <IDSymbol name="IDM_SQLWB_SHOWPLAN_CONTEXT" value="0x0080" />   <!-- execution plan -->
+    </GuidSymbol>
+    <!-- #endif -->
+  </Symbols>
+</CommandTable>

@@ -1,0 +1,99 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- In-process VSIX for SQL Server Management Studio 22.
+       SSMS 22 is a .NET Framework 4.8 process on the Visual Studio 2026 shell, so the
+       extension assembly must target net48. Modern .NET cannot be loaded in-process. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>__ExtensionName__</RootNamespace>
+    <AssemblyName>__ExtensionName__</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+
+    <!-- The manifest is the single source of truth for the version. -->
+    <Version>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\source.extension.vsixmanifest')), '&lt;Identity\b[^&gt;]*\bVersion="([^"]+)"').Groups[1].Value)</Version>
+
+    <!-- VSIX packaging. AutoSetup makes the Microsoft.VSSDK.BuildTools package import its
+         packaging targets, so "dotnet build" works without the Visual Studio extension
+         development workload. -->
+    <VSSDKBuildToolsAutoSetup>true</VSSDKBuildToolsAutoSetup>
+    <GeneratePkgDefFile>true</GeneratePkgDefFile>
+    <UseCodebase>true</UseCodebase>
+    <CreateVsixContainer>true</CreateVsixContainer>
+    <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
+    <IncludeDebugSymbolsInVSIXContainer>true</IncludeDebugSymbolsInVSIXContainer>
+    <!-- DeployExtension targets the Visual Studio experimental hive, which SSMS does not have. -->
+    <DeployExtension>false</DeployExtension>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Compile-time only: SSMS supplies the Visual Studio assemblies at runtime. -->
+    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.5.40034" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- .NET Framework assemblies an SDK-style project does not reference by default. -->
+    <Reference Include="System.Design" />
+    <Reference Include="System.ComponentModel.Composition" />
+  </ItemGroup>
+
+  <!-- SSMS's own assemblies are referenced from a local SSMS install, compile-time only
+       (Private=false), so the host's copies are the ones loaded at runtime. They are Microsoft
+       binaries: never copy them into the VSIX or commit them to the repository.
+       Override the location with -p:SsmsIdeDir="<path to Common7\IDE>". -->
+  <PropertyGroup>
+    <SsmsVersion Condition="'$(SsmsVersion)' == ''">22</SsmsVersion>
+    <SsmsChannel Condition="'$(SsmsChannel)' == ''">Release</SsmsChannel>
+    <_SsmsProgramFiles>$([System.Environment]::GetEnvironmentVariable('ProgramW6432'))</_SsmsProgramFiles>
+    <_SsmsProgramFiles Condition="'$(_SsmsProgramFiles)' == ''">$(ProgramFiles)</_SsmsProgramFiles>
+    <SsmsIdeDir Condition="'$(SsmsIdeDir)' == ''">$(_SsmsProgramFiles)\Microsoft SQL Server Management Studio $(SsmsVersion)\$(SsmsChannel)\Common7\IDE</SsmsIdeDir>
+    <!-- SSMS assemblies reference Visual Studio 18.x assemblies while the SDK package is 17.14.
+         SSMS's binding redirects unify them at runtime; the compile-time conflict is noise. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SsmsReference Include="SqlWorkbench.Interfaces" />
+    <SsmsReference Include="SqlPackageBase" />
+    <SsmsReference Include="ConnectionDlg" />
+    <SsmsReference Include="Microsoft.SqlServer.RegSvrEnum" />
+    <SsmsReference Include="Microsoft.SqlServer.ConnectionInfo" />
+    <SsmsReference Include="Microsoft.SqlServer.Management.Sdk.Sfc" />
+    <SsmsReference Include="Microsoft.Data.SqlClient" />
+    <Reference Include="@(SsmsReference)">
+      <HintPath>$(SsmsIdeDir)\%(Identity).dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="CheckSsmsInstall" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(SsmsIdeDir)\SqlWorkbench.Interfaces.dll')"
+           Text="SSMS $(SsmsVersion) assemblies were not found in '$(SsmsIdeDir)'. Install SSMS $(SsmsVersion), or pass -p:SsmsIdeDir=&lt;path to Common7\IDE&gt; (or -p:SsmsChannel=Preview)." />
+  </Target>
+
+  <!-- Exposes the manifest version to code as BuildInfo.Version (a compile-time constant,
+       which attributes such as InstalledProductRegistration require). -->
+  <Target Name="GenerateBuildInfo" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_BuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</_BuildInfoFile>
+    </PropertyGroup>
+    <Error Condition="'$(Version)' == ''" Text="Could not read the version from source.extension.vsixmanifest." />
+    <WriteLinesToFile File="$(_BuildInfoFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="namespace $(RootNamespace)%3B;internal static class BuildInfo { public const string Version = &quot;$(Version)&quot;%3B }" />
+    <ItemGroup>
+      <Compile Include="$(_BuildInfoFile)" />
+      <FileWrites Include="$(_BuildInfoFile)" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <None Include="source.extension.vsixmanifest" SubType="Designer" />
+    <VSCTCompile Include="__ExtensionName__Package.vsct" ResourceName="Menus.ctmenu" />
+  </ItemGroup>
+
+</Project>
